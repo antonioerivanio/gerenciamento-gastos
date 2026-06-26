@@ -1,4 +1,4 @@
-#  gestao-financeira
+#  gestão-financeira
 
 Aplicacao com frontend React/Vite, backend Spring Boot e autenticacao/banco no Supabase.
 
