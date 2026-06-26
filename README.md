@@ -56,13 +56,15 @@ npm.cmd run dev
 
 O frontend esta pronto para deploy na Vercel usando a pasta `frontend` como Root Directory.
 
-Configuracao na Vercel:
+Configuracao recomendada na Vercel:
 
 - Framework Preset: `Vite`
 - Root Directory: `frontend`
 - Install Command: `npm ci`
 - Build Command: `npm run build`
 - Output Directory: `dist`
+
+Se a Vercel mostrar `react-scripts build`, remova essa configuracao manual. Este projeto usa Vite, nao Create React App.
 
 Variaveis de ambiente na Vercel:
 
