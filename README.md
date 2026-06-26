@@ -20,7 +20,7 @@ Crie `frontend/.env.local`:
 ```env
 VITE_SUPABASE_URL=https://seu-projeto.supabase.co
 VITE_SUPABASE_ANON_KEY=sua-chave-anon-publica
-VITE_API_BASE_URL=http://localhost:8080
+VITE_API_BASE_URL=http://localhost:8085
 ```
 
 Defina as variaveis do backend no terminal ou na configuracao da IDE:
@@ -50,7 +50,7 @@ npm.cmd run dev
 ```
 
 - Frontend: `http://localhost:5173`
-- Healthcheck: `http://localhost:8080/api/health`
+- Healthcheck: `http://localhost:8085/api/health`
 
 ## Funcionalidades
 
@@ -61,3 +61,31 @@ npm.cmd run dev
 - Resumo de entradas, saidas e saldo
 - Isolamento dos dados por usuario com Row Level Security
 # gerenciamento-gastos
+## Docker
+
+Copie o arquivo `.env.docker.example` para `.env` e preencha as chaves do Supabase:
+
+```env
+SUPABASE_URL=https://seu-projeto.supabase.co
+SUPABASE_ANON_KEY=sua-chave-publica-anon
+
+VITE_SUPABASE_URL=https://seu-projeto.supabase.co
+VITE_SUPABASE_ANON_KEY=sua-chave-publica-anon
+```
+
+Suba a aplicacao com Docker Compose:
+
+```bash
+docker compose up --build
+```
+
+URLs:
+
+- Frontend: `http://localhost:5173`
+- Backend: `http://localhost:8085/api/health`
+
+Para parar:
+
+```bash
+docker compose down
+```
