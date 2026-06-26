@@ -1,0 +1,15 @@
+npm warn Unknown user config "python". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+[31mfailed to load config from C:\Users\erivanio.cruz\Documents\Sistema-Gastos\frontend\vite.config.js[39m
+[31merror when starting dev server:
+Error: spawn EPERM
+    at ChildProcess.spawn (node:internal/child_process:440:11)
+    at Object.spawn (node:child_process:797:9)
+    at ensureServiceIsRunning (C:\Users\erivanio.cruz\Documents\Sistema-Gastos\frontend\node_modules\esbuild\lib\main.js:2268:29)
+    at build (C:\Users\erivanio.cruz\Documents\Sistema-Gastos\frontend\node_modules\esbuild\lib\main.js:2166:26)
+    at bundleConfigFile (file:///C:/Users/erivanio.cruz/Documents/Sistema-Gastos/frontend/node_modules/vite/dist/node/chunks/config.js:35895:23)
+npm warn Unknown user config "msvs_version". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+    at bundleAndLoadConfigFile (file:///C:/Users/erivanio.cruz/Documents/Sistema-Gastos/frontend/node_modules/vite/dist/node/chunks/config.js:35882:24)
+    at loadConfigFromFile (file:///C:/Users/erivanio.cruz/Documents/Sistema-Gastos/frontend/node_modules/vite/dist/node/chunks/config.js:35851:179)
+    at resolveConfig (file:///C:/Users/erivanio.cruz/Documents/Sistema-Gastos/frontend/node_modules/vite/dist/node/chunks/config.js:35500:28)
+    at _createServer (file:///C:/Users/erivanio.cruz/Documents/Sistema-Gastos/frontend/node_modules/vite/dist/node/chunks/config.js:25441:73)
+    at createServer$2 (file:///C:/Users/erivanio.cruz/Documents/Sistema-Gastos/frontend/node_modules/vite/dist/node/chunks/config.js:25438:9)[39m
