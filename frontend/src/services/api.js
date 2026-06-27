@@ -27,7 +27,7 @@ async function request(path, accessToken, options = {}) {
     throw new Error(
       errorBody?.detail ??
         errorBody?.message ??
-        "Nao foi possivel concluir a operacao.",
+        errorBody + "Nao foi possivel concluir a operacao.",
     );
   }
 
