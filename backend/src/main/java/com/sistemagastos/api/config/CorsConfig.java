@@ -17,7 +17,7 @@ public class CorsConfig {
 
     private final List<String> allowedOrigins;
 
-    public CorsConfig(@Value("${app.cors.allowed-origins:http://localhost:5173,https://*.vercel.app}") String allowedOrigins) {
+    public CorsConfig(@Value("${app.cors.allowed-origins:http://localhost:5173,https://vercel.app,https://gerenciamento-gastos-14f7b19wm-bravo14.vercel.app/}") String allowedOrigins) {
         this.allowedOrigins = Arrays.stream(allowedOrigins.split(","))
                 .map(String::trim)
                 .filter(origin -> !origin.isBlank())
