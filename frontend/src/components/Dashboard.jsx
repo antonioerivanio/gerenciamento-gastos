@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ArrowDownCircle,
   ArrowUpCircle,
@@ -8,25 +8,25 @@ import {
   Trash2,
   WalletCards,
   X,
-} from 'lucide-react';
+} from "lucide-react";
 import {
   createMovimentacao,
   deleteMovimentacao,
   listMovimentacoes,
   updateMovimentacao,
-} from '../services/api.js';
+} from "../services/api.js";
 
 const emptyForm = {
-  tipo: 'SAIDA',
-  descricao: '',
-  categoria: '',
-  valor: '',
-  data: new Date().toLocaleDateString('en-CA'),
+  tipo: "SAIDA",
+  descricao: "",
+  categoria: "",
+  valor: "",
+  data: new Date().toLocaleDateString("en-CA"),
 };
 
-const currency = new Intl.NumberFormat('pt-BR', {
-  style: 'currency',
-  currency: 'BRL',
+const currency = new Intl.NumberFormat("pt-BR", {
+  style: "currency",
+  currency: "BRL",
 });
 
 export default function Dashboard({ session, onSignOut }) {
@@ -43,10 +43,12 @@ export default function Dashboard({ session, onSignOut }) {
     setFeedback(null);
 
     try {
+      console.log("session.access_token", session.access_token);
       const data = await listMovimentacoes(session.access_token);
+
       setMovimentacoes(data);
     } catch (error) {
-      setFeedback({ type: 'error', message: error.message });
+      setFeedback({ type: "error", message: error.message });
     } finally {
       setLoading(false);
     }
@@ -61,7 +63,7 @@ export default function Dashboard({ session, onSignOut }) {
       movimentacoes.reduce(
         (result, item) => {
           const value = Number(item.valor);
-          result[item.tipo === 'ENTRADA' ? 'entradas' : 'saidas'] += value;
+          result[item.tipo === "ENTRADA" ? "entradas" : "saidas"] += value;
           return result;
         },
         { entradas: 0, saidas: 0 },
@@ -86,7 +88,7 @@ export default function Dashboard({ session, onSignOut }) {
 
     const payload = {
       ...form,
-     valor: parseCurrencyInput(form.valor),
+      valor: parseCurrencyInput(form.valor),
     };
 
     try {
@@ -99,16 +101,16 @@ export default function Dashboard({ session, onSignOut }) {
         setMovimentacoes((current) =>
           current.map((item) => (item.id === editingId ? updated : item)),
         );
-        setFeedback({ type: 'success', message: 'Movimentacao atualizada.' });
+        setFeedback({ type: "success", message: "Movimentacao atualizada." });
       } else {
         const created = await createMovimentacao(session.access_token, payload);
         setMovimentacoes((current) => [created, ...current]);
-        setFeedback({ type: 'success', message: 'Movimentacao cadastrada.' });
+        setFeedback({ type: "success", message: "Movimentacao cadastrada." });
       }
 
       resetForm();
     } catch (error) {
-      setFeedback({ type: 'error', message: error.message });
+      setFeedback({ type: "error", message: error.message });
     } finally {
       setSubmitting(false);
     }
@@ -123,7 +125,7 @@ export default function Dashboard({ session, onSignOut }) {
       valor: String(item.valor),
       data: item.data,
     });
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   async function handleDelete(id) {
@@ -137,7 +139,7 @@ export default function Dashboard({ session, onSignOut }) {
         resetForm();
       }
     } catch (error) {
-      setFeedback({ type: 'error', message: error.message });
+      setFeedback({ type: "error", message: error.message });
     }
   }
 
@@ -151,30 +153,30 @@ export default function Dashboard({ session, onSignOut }) {
     }
   }
 
-  const currencyFormatter = new Intl.NumberFormat('pt-BR', {
-  style: 'currency',
-  currency: 'BRL',
-});
+  const currencyFormatter = new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  });
 
-function formatCurrencyInput(value) {
-  const digits = value.replace(/\D/g, '');
+  function formatCurrencyInput(value) {
+    const digits = value.replace(/\D/g, "");
 
-  if (!digits) {
-    return '';
+    if (!digits) {
+      return "";
+    }
+
+    return currencyFormatter.format(Number(digits) / 100);
   }
 
-  return currencyFormatter.format(Number(digits) / 100);
-}
+  function parseCurrencyInput(value) {
+    const digits = value.replace(/\D/g, "");
 
-function parseCurrencyInput(value) {
-  const digits = value.replace(/\D/g, '');
+    if (!digits) {
+      return 0;
+    }
 
-  if (!digits) {
-    return 0;
+    return Number(digits) / 100;
   }
-
-  return Number(digits) / 100;
-}
 
   return (
     <main className="app-shell">
@@ -222,20 +224,33 @@ function parseCurrencyInput(value) {
         <form className="movement-form" onSubmit={handleSubmit}>
           <div className="section-heading">
             <div>
-              <p className="eyebrow">{editingId ? 'Edicao' : 'Novo cadastro'}</p>
-              <h2>{editingId ? 'Editar movimentacao' : 'Adicionar movimentacao'}</h2>
+              <p className="eyebrow">
+                {editingId ? "Edicao" : "Novo cadastro"}
+              </p>
+              <h2>
+                {editingId ? "Editar movimentacao" : "Adicionar movimentacao"}
+              </h2>
             </div>
             {editingId && (
-              <button className="icon-action neutral" onClick={resetForm} title="Cancelar" type="button">
+              <button
+                className="icon-action neutral"
+                onClick={resetForm}
+                title="Cancelar"
+                type="button"
+              >
                 <X size={18} aria-hidden="true" />
               </button>
             )}
           </div>
 
           <div className="type-switch">
-            <label className={form.tipo === 'ENTRADA' ? 'selected income-option' : ''}>
+            <label
+              className={
+                form.tipo === "ENTRADA" ? "selected income-option" : ""
+              }
+            >
               <input
-                checked={form.tipo === 'ENTRADA'}
+                checked={form.tipo === "ENTRADA"}
                 name="tipo"
                 onChange={updateField}
                 type="radio"
@@ -244,9 +259,11 @@ function parseCurrencyInput(value) {
               <ArrowUpCircle size={18} aria-hidden="true" />
               Entrada
             </label>
-            <label className={form.tipo === 'SAIDA' ? 'selected expense-option' : ''}>
+            <label
+              className={form.tipo === "SAIDA" ? "selected expense-option" : ""}
+            >
               <input
-                checked={form.tipo === 'SAIDA'}
+                checked={form.tipo === "SAIDA"}
                 name="tipo"
                 onChange={updateField}
                 type="radio"
@@ -310,9 +327,17 @@ function parseCurrencyInput(value) {
             </label>
           </div>
 
-          <button className="primary-action" disabled={submitting} type="submit">
+          <button
+            className="primary-action"
+            disabled={submitting}
+            type="submit"
+          >
             <Plus size={18} aria-hidden="true" />
-            {submitting ? 'Salvando...' : editingId ? 'Salvar alteracoes' : 'Cadastrar'}
+            {submitting
+              ? "Salvando..."
+              : editingId
+                ? "Salvar alteracoes"
+                : "Cadastrar"}
           </button>
         </form>
 
@@ -326,12 +351,18 @@ function parseCurrencyInput(value) {
           </div>
 
           {feedback && (
-            <p className={feedback.type === 'error' ? 'status-error' : 'status-success'}>
+            <p
+              className={
+                feedback.type === "error" ? "status-error" : "status-success"
+              }
+            >
               {feedback.message}
             </p>
           )}
 
-          {loading && <p className="empty-state">Carregando movimentacoes...</p>}
+          {loading && (
+            <p className="empty-state">Carregando movimentacoes...</p>
+          )}
 
           {!loading && movimentacoes.length === 0 && (
             <p className="empty-state">Nenhuma movimentacao cadastrada.</p>
@@ -342,7 +373,7 @@ function parseCurrencyInput(value) {
               {movimentacoes.map((item) => (
                 <article className="movement-item" key={item.id}>
                   <div className={`movement-icon ${item.tipo.toLowerCase()}`}>
-                    {item.tipo === 'ENTRADA' ? (
+                    {item.tipo === "ENTRADA" ? (
                       <ArrowUpCircle size={20} aria-hidden="true" />
                     ) : (
                       <ArrowDownCircle size={20} aria-hidden="true" />
@@ -351,11 +382,19 @@ function parseCurrencyInput(value) {
                   <div className="movement-description">
                     <strong>{item.descricao}</strong>
                     <span>
-                      {item.categoria} · {new Date(`${item.data}T12:00:00`).toLocaleDateString('pt-BR')}
+                      {item.categoria} ·{" "}
+                      {new Date(`${item.data}T12:00:00`).toLocaleDateString(
+                        "pt-BR",
+                      )}
                     </span>
                   </div>
-                  <strong className={item.tipo === 'ENTRADA' ? 'value-income' : 'value-expense'}>
-                    {item.tipo === 'ENTRADA' ? '+' : '-'} {currency.format(Number(item.valor))}
+                  <strong
+                    className={
+                      item.tipo === "ENTRADA" ? "value-income" : "value-expense"
+                    }
+                  >
+                    {item.tipo === "ENTRADA" ? "+" : "-"}{" "}
+                    {currency.format(Number(item.valor))}
                   </strong>
                   <div className="movement-actions">
                     <button
