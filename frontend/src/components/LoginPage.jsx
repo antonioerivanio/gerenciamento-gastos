@@ -1,21 +1,127 @@
-import { useState } from 'react';
-import { Lock, Mail, UserRound, WalletCards } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { KeyRound, Lock, Mail, UserRound, WalletCards } from 'lucide-react';
 
-export default function LoginPage({ configMissing, onSignIn, onSignUp }) {
-  const [mode, setMode] = useState('signIn');
-  const [form, setForm] = useState({ email: '', password: '', name: '' });
+const SIGN_UP_COOLDOWN_SECONDS = 60;
+
+function getSubmitLabel({ submitting, isBlockedByCooldown, cooldownRemaining, mode }) {
+  if (submitting) {
+    return 'Aguarde...';
+  }
+
+  if (isBlockedByCooldown) {
+    return `Tente novamente em ${cooldownRemaining}s`;
+  }
+
+  if (mode === 'signUp') {
+    return 'Criar conta';
+  }
+
+  if (mode === 'forgotPassword') {
+    return 'Enviar link de recuperacao';
+  }
+
+  if (mode === 'resetPassword') {
+    return 'Salvar nova senha';
+  }
+
+  return 'Entrar';
+}
+
+export default function LoginPage({
+  configMissing,
+  recoveringPassword,
+  onPasswordReset,
+  onSignIn,
+  onSignUp,
+  onUpdatePassword,
+}) {
+  const [mode, setMode] = useState(recoveringPassword ? 'resetPassword' : 'signIn');
+  const [form, setForm] = useState({
+    email: '',
+    password: '',
+    confirmPassword: '',
+    name: '',
+  });
   const [feedback, setFeedback] = useState({ type: null, message: null });
   const [submitting, setSubmitting] = useState(false);
+  const [cooldownUntil, setCooldownUntil] = useState(0);
+  const [now, setNow] = useState(Date.now());
 
+  const isSignIn = mode === 'signIn';
   const isSignUp = mode === 'signUp';
+  const isForgotPassword = mode === 'forgotPassword';
+  const isResetPassword = mode === 'resetPassword';
+  const cooldownRemaining = Math.max(0, Math.ceil((cooldownUntil - now) / 1000));
+  const isBlockedByCooldown = (isSignUp || isForgotPassword) && cooldownRemaining > 0;
+
+  useEffect(() => {
+    if (recoveringPassword) {
+      setMode('resetPassword');
+      setFeedback({ type: 'success', message: 'Informe sua nova senha para concluir a recuperacao.' });
+    }
+  }, [recoveringPassword]);
+
+  useEffect(() => {
+    if (!cooldownUntil) {
+      return undefined;
+    }
+
+    const interval = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(interval);
+  }, [cooldownUntil]);
+
+  function startCooldown(seconds = SIGN_UP_COOLDOWN_SECONDS) {
+    setNow(Date.now());
+    setCooldownUntil(Date.now() + seconds * 1000);
+  }
+
+  function changeMode(nextMode) {
+    setMode(nextMode);
+    setFeedback({ type: null, message: null });
+  }
 
   function updateField(event) {
     const { name, value } = event.target;
     setForm((current) => ({ ...current, [name]: value }));
   }
 
+  function validateForm() {
+    if ((isSignIn || isSignUp || isForgotPassword) && !form.email.trim()) {
+      return 'Informe o email.';
+    }
+
+    if ((isSignIn || isSignUp || isResetPassword) && form.password.length < 6) {
+      return 'A senha deve ter pelo menos 6 caracteres.';
+    }
+
+    if (isSignUp && !form.name.trim()) {
+      return 'Informe o nome.';
+    }
+
+    if (isResetPassword && form.password !== form.confirmPassword) {
+      return 'A confirmacao de senha nao confere.';
+    }
+
+    return null;
+  }
+
   async function handleSubmit(event) {
     event.preventDefault();
+
+    if (isBlockedByCooldown) {
+      setFeedback({
+        type: 'error',
+        message: `Aguarde ${cooldownRemaining}s antes de tentar novamente.`,
+      });
+      return;
+    }
+
+    const validationMessage = validateForm();
+    if (validationMessage) {
+      setFeedback({ type: 'error', message: validationMessage });
+      return;
+    }
+
     setFeedback({ type: null, message: null });
     setSubmitting(true);
 
@@ -24,15 +130,36 @@ export default function LoginPage({ configMissing, onSignIn, onSignUp }) {
         const session = await onSignUp(form);
 
         if (!session) {
+          startCooldown();
           setFeedback({
             type: 'success',
             message: 'Cadastro criado. Verifique seu email para liberar o acesso.',
           });
         }
+      } else if (isForgotPassword) {
+        await onPasswordReset(form);
+        startCooldown();
+        setFeedback({
+          type: 'success',
+          message: 'Enviamos um link de recuperacao para o email informado.',
+        });
+      } else if (isResetPassword) {
+        await onUpdatePassword(form);
+        setForm((current) => ({ ...current, password: '', confirmPassword: '' }));
+        setMode('signIn');
+        setFeedback({ type: 'success', message: 'Senha alterada com sucesso. Entre com a nova senha.' });
       } else {
         await onSignIn(form);
       }
     } catch (error) {
+      if (error.isRateLimit) {
+        startCooldown(error.retryAfterSeconds);
+      }
+
+      if (error.isUserAlreadyRegistered) {
+        setMode('forgotPassword');
+      }
+
       setFeedback({
         type: 'error',
         message: error.message,
@@ -55,28 +182,24 @@ export default function LoginPage({ configMissing, onSignIn, onSignUp }) {
           </div>
         </div>
 
-        <div className="mode-switch" aria-label="Modo de acesso">
-          <button
-            className={!isSignUp ? 'active' : ''}
-            type="button"
-            onClick={() => {
-              setMode('signIn');
-              setFeedback({ type: null, message: null });
-            }}
-          >
-            Entrar
-          </button>
-          <button
-            className={isSignUp ? 'active' : ''}
-            type="button"
-            onClick={() => {
-              setMode('signUp');
-              setFeedback({ type: null, message: null });
-            }}
-          >
-            Criar conta
-          </button>
-        </div>
+        {!isResetPassword && (
+          <div className="mode-switch" aria-label="Modo de acesso">
+            <button
+              className={isSignIn ? 'active' : ''}
+              type="button"
+              onClick={() => changeMode('signIn')}
+            >
+              Entrar
+            </button>
+            <button
+              className={isSignUp ? 'active' : ''}
+              type="button"
+              onClick={() => changeMode('signUp')}
+            >
+              Criar conta
+            </button>
+          </div>
+        )}
 
         {configMissing && (
           <p className="status-error">
@@ -92,7 +215,7 @@ export default function LoginPage({ configMissing, onSignIn, onSignUp }) {
                 <UserRound size={18} aria-hidden="true" />
                 <input
                   autoComplete="name"
-                  disabled={configMissing || submitting}
+                  disabled={configMissing || submitting || isBlockedByCooldown}
                   name="name"
                   onChange={updateField}
                   required
@@ -103,38 +226,61 @@ export default function LoginPage({ configMissing, onSignIn, onSignUp }) {
             </label>
           )}
 
-          <label className="field">
-            <span>Email</span>
-            <div className="input-control">
-              <Mail size={18} aria-hidden="true" />
-              <input
-                autoComplete="email"
-                disabled={configMissing || submitting}
-                name="email"
-                onChange={updateField}
-                required
-                type="email"
-                value={form.email}
-              />
-            </div>
-          </label>
+          {!isResetPassword && (
+            <label className="field">
+              <span>Email</span>
+              <div className="input-control">
+                <Mail size={18} aria-hidden="true" />
+                <input
+                  autoComplete="email"
+                  disabled={configMissing || submitting || isBlockedByCooldown}
+                  name="email"
+                  onChange={updateField}
+                  required
+                  type="email"
+                  value={form.email}
+                />
+              </div>
+            </label>
+          )}
 
-          <label className="field">
-            <span>Senha</span>
-            <div className="input-control">
-              <Lock size={18} aria-hidden="true" />
-              <input
-                autoComplete={isSignUp ? 'new-password' : 'current-password'}
-                disabled={configMissing || submitting}
-                minLength={6}
-                name="password"
-                onChange={updateField}
-                required
-                type="password"
-                value={form.password}
-              />
-            </div>
-          </label>
+          {!isForgotPassword && (
+            <label className="field">
+              <span>{isResetPassword ? 'Nova senha' : 'Senha'}</span>
+              <div className="input-control">
+                <Lock size={18} aria-hidden="true" />
+                <input
+                  autoComplete={isSignUp || isResetPassword ? 'new-password' : 'current-password'}
+                  disabled={configMissing || submitting || isBlockedByCooldown}
+                  minLength={6}
+                  name="password"
+                  onChange={updateField}
+                  required
+                  type="password"
+                  value={form.password}
+                />
+              </div>
+            </label>
+          )}
+
+          {isResetPassword && (
+            <label className="field">
+              <span>Confirmar nova senha</span>
+              <div className="input-control">
+                <KeyRound size={18} aria-hidden="true" />
+                <input
+                  autoComplete="new-password"
+                  disabled={configMissing || submitting}
+                  minLength={6}
+                  name="confirmPassword"
+                  onChange={updateField}
+                  required
+                  type="password"
+                  value={form.confirmPassword}
+                />
+              </div>
+            </label>
+          )}
 
           {feedback.message && (
             <p className={feedback.type === 'error' ? 'status-error' : 'status-success'}>
@@ -142,9 +288,24 @@ export default function LoginPage({ configMissing, onSignIn, onSignUp }) {
             </p>
           )}
 
-          <button className="primary-action" disabled={configMissing || submitting} type="submit">
-            {submitting ? 'Aguarde...' : isSignUp ? 'Criar conta' : 'Entrar'}
+          <button
+            className="primary-action"
+            disabled={configMissing || submitting || isBlockedByCooldown}
+            type="submit"
+          >
+            {getSubmitLabel({ submitting, isBlockedByCooldown, cooldownRemaining, mode })}
           </button>
+
+          {!isResetPassword && (
+            <button
+              className="link-action"
+              disabled={configMissing || submitting}
+              type="button"
+              onClick={() => changeMode(isForgotPassword ? 'signIn' : 'forgotPassword')}
+            >
+              {isForgotPassword ? 'Voltar para entrar' : 'Recuperar senha'}
+            </button>
+          )}
         </form>
       </section>
     </main>

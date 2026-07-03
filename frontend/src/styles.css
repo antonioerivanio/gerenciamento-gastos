@@ -330,6 +330,18 @@ h1 {
   background: transparent;
 }
 
+
+.link-action {
+  min-height: 36px;
+  border: 0;
+  color: #146c5d;
+  background: transparent;
+  font-weight: 800;
+}
+
+.link-action:hover:not(:disabled) {
+  text-decoration: underline;
+}
 .primary-action {
   display: flex;
   align-items: center;
