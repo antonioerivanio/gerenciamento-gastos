@@ -2,7 +2,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ArrowDownCircle,
   ArrowUpCircle,
+  Download,
   Edit3,
+  FileText,
   LogOut,
   Plus,
   Trash2,
@@ -24,6 +26,19 @@ const emptyForm = {
   data: new Date().toLocaleDateString("en-CA"),
 };
 
+const emptyReportFilters = {
+  startDate: "",
+  endDate: "",
+  category: "ALL",
+  type: "ALL",
+};
+
+const reportTypes = {
+  ALL: "Todas",
+  ENTRADA: "Entradas",
+  SAIDA: "Saidas",
+};
+
 const currency = new Intl.NumberFormat("pt-BR", {
   style: "currency",
   currency: "BRL",
@@ -32,6 +47,7 @@ const currency = new Intl.NumberFormat("pt-BR", {
 export default function Dashboard({ session, onSignOut }) {
   const [movimentacoes, setMovimentacoes] = useState([]);
   const [form, setForm] = useState(emptyForm);
+  const [reportFilters, setReportFilters] = useState(emptyReportFilters);
   const [editingId, setEditingId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -71,9 +87,57 @@ export default function Dashboard({ session, onSignOut }) {
     [movimentacoes],
   );
 
+  const categories = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          movimentacoes
+            .map((item) => item.categoria?.trim())
+            .filter(Boolean),
+        ),
+      ).sort((first, second) => first.localeCompare(second, "pt-BR")),
+    [movimentacoes],
+  );
+
+  const reportMovimentacoes = useMemo(() => {
+    return movimentacoes
+      .filter((item) => {
+        const matchesStart =
+          !reportFilters.startDate || item.data >= reportFilters.startDate;
+        const matchesEnd =
+          !reportFilters.endDate || item.data <= reportFilters.endDate;
+        const matchesCategory =
+          reportFilters.category === "ALL" ||
+          item.categoria === reportFilters.category;
+        const matchesType =
+          reportFilters.type === "ALL" || item.tipo === reportFilters.type;
+
+        return matchesStart && matchesEnd && matchesCategory && matchesType;
+      })
+      .toSorted((first, second) => second.data.localeCompare(first.data));
+  }, [movimentacoes, reportFilters]);
+
+  const reportTotals = useMemo(
+    () =>
+      reportMovimentacoes.reduce(
+        (result, item) => {
+          const value = Number(item.valor);
+          result[item.tipo === "ENTRADA" ? "entradas" : "saidas"] += value;
+          return result;
+        },
+        { entradas: 0, saidas: 0 },
+      ),
+    [reportMovimentacoes],
+  );
+
   function updateField(event) {
     const { name, value } = event.target;
     setForm((current) => ({ ...current, [name]: value }));
+  }
+
+  function updateReportFilter(event) {
+    const { name, value } = event.target;
+    setReportFilters((current) => ({ ...current, [name]: value }));
   }
 
   function resetForm() {
@@ -151,6 +215,76 @@ export default function Dashboard({ session, onSignOut }) {
     } finally {
       setSigningOut(false);
     }
+  }
+
+  function exportCsv() {
+    if (reportMovimentacoes.length === 0) {
+      setFeedback({
+        type: "error",
+        message: "Nenhuma movimentacao encontrada para exportar.",
+      });
+      return;
+    }
+
+    const rows = [
+      ["Data", "Tipo", "Descricao", "Categoria", "Valor"],
+      ...reportMovimentacoes.map((item) => [
+        formatDate(item.data),
+        reportTypes[item.tipo],
+        item.descricao,
+        item.categoria,
+        formatDecimal(Number(item.valor)),
+      ]),
+      [],
+      ["Total entradas", "", "", "", formatDecimal(reportTotals.entradas)],
+      ["Total saidas", "", "", "", formatDecimal(reportTotals.saidas)],
+      [
+        "Saldo",
+        "",
+        "",
+        "",
+        formatDecimal(reportTotals.entradas - reportTotals.saidas),
+      ],
+    ];
+
+    downloadFile(
+      buildReportFilename("csv"),
+      `\uFEFF${rows.map(toCsvRow).join("\r\n")}`,
+      "text/csv;charset=utf-8",
+    );
+  }
+
+  function exportPdf() {
+    if (reportMovimentacoes.length === 0) {
+      setFeedback({
+        type: "error",
+        message: "Nenhuma movimentacao encontrada para exportar.",
+      });
+      return;
+    }
+
+    const lines = [
+      "Relatorio financeiro",
+      `Periodo: ${getPeriodLabel(reportFilters)}`,
+      `Categoria: ${
+        reportFilters.category === "ALL" ? "Todas" : reportFilters.category
+      }`,
+      `Tipo: ${reportTypes[reportFilters.type]}`,
+      "",
+      `Entradas: ${currency.format(reportTotals.entradas)}`,
+      `Saidas: ${currency.format(reportTotals.saidas)}`,
+      `Saldo: ${currency.format(reportTotals.entradas - reportTotals.saidas)}`,
+      "",
+      "Data | Tipo | Categoria | Descricao | Valor",
+      ...reportMovimentacoes.map(
+        (item) =>
+          `${formatDate(item.data)} | ${reportTypes[item.tipo]} | ${
+            item.categoria
+          } | ${item.descricao} | ${currency.format(Number(item.valor))}`,
+      ),
+    ];
+
+    downloadFile(buildReportFilename("pdf"), buildPdf(lines), "application/pdf");
   }
 
   const currencyFormatter = new Intl.NumberFormat("pt-BR", {
@@ -420,6 +554,240 @@ export default function Dashboard({ session, onSignOut }) {
           )}
         </section>
       </section>
+
+      <section className="reports-panel">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">Relatorios</p>
+            <h2>Exportar por periodo e categoria</h2>
+          </div>
+          <span className="movement-count">{reportMovimentacoes.length}</span>
+        </div>
+
+        <div className="report-filters">
+          <label className="field">
+            <span>Data inicial</span>
+            <input
+              name="startDate"
+              onChange={updateReportFilter}
+              type="date"
+              value={reportFilters.startDate}
+            />
+          </label>
+          <label className="field">
+            <span>Data final</span>
+            <input
+              name="endDate"
+              onChange={updateReportFilter}
+              type="date"
+              value={reportFilters.endDate}
+            />
+          </label>
+          <label className="field">
+            <span>Categoria</span>
+            <select
+              name="category"
+              onChange={updateReportFilter}
+              value={reportFilters.category}
+            >
+              <option value="ALL">Todas</option>
+              {categories.map((category) => (
+                <option key={category} value={category}>
+                  {category}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="field">
+            <span>Tipo</span>
+            <select
+              name="type"
+              onChange={updateReportFilter}
+              value={reportFilters.type}
+            >
+              <option value="ALL">Todas</option>
+              <option value="ENTRADA">Entradas</option>
+              <option value="SAIDA">Saidas</option>
+            </select>
+          </label>
+        </div>
+
+        <div className="report-summary">
+          <span>Entradas: {currency.format(reportTotals.entradas)}</span>
+          <span>Saidas: {currency.format(reportTotals.saidas)}</span>
+          <strong>
+            Saldo: {currency.format(reportTotals.entradas - reportTotals.saidas)}
+          </strong>
+        </div>
+
+        <div className="report-actions">
+          <button
+            className="secondary-action"
+            disabled={reportMovimentacoes.length === 0}
+            onClick={exportCsv}
+            type="button"
+          >
+            <Download size={18} aria-hidden="true" />
+            CSV
+          </button>
+          <button
+            className="secondary-action"
+            disabled={reportMovimentacoes.length === 0}
+            onClick={exportPdf}
+            type="button"
+          >
+            <FileText size={18} aria-hidden="true" />
+            PDF
+          </button>
+        </div>
+      </section>
     </main>
   );
+}
+
+function formatDate(value) {
+  return new Date(`${value}T12:00:00`).toLocaleDateString("pt-BR");
+}
+
+function formatDecimal(value) {
+  return value.toLocaleString("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
+function getPeriodLabel(filters) {
+  if (filters.startDate && filters.endDate) {
+    return `${formatDate(filters.startDate)} a ${formatDate(filters.endDate)}`;
+  }
+
+  if (filters.startDate) {
+    return `A partir de ${formatDate(filters.startDate)}`;
+  }
+
+  if (filters.endDate) {
+    return `Ate ${formatDate(filters.endDate)}`;
+  }
+
+  return "Todo o periodo";
+}
+
+function toCsvRow(values) {
+  return values
+    .map((value) => `"${String(value).replaceAll('"', '""')}"`)
+    .join(";");
+}
+
+function buildReportFilename(extension) {
+  const date = new Date().toLocaleDateString("en-CA");
+  return `relatorio-financeiro-${date}.${extension}`;
+}
+
+function downloadFile(filename, content, type) {
+  const blob = new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+function buildPdf(lines) {
+  const pageWidth = 595;
+  const pageHeight = 842;
+  const margin = 42;
+  const fontSize = 10;
+  const lineHeight = 16;
+  const maxChars = 96;
+  const pages = [[]];
+  let y = margin;
+
+  lines.flatMap((line) => wrapLine(line, maxChars)).forEach((line) => {
+    if (y > pageHeight - margin) {
+      pages.push([]);
+      y = margin;
+    }
+
+    pages.at(-1).push(line);
+    y += lineHeight;
+  });
+
+  const objects = [
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    `<< /Type /Pages /Kids [${pages
+      .map((_, index) => `${3 + index * 2} 0 R`)
+      .join(" ")}] /Count ${pages.length} >>`,
+  ];
+
+  pages.forEach((page, index) => {
+    const pageObjectNumber = 3 + index * 2;
+    const contentObjectNumber = pageObjectNumber + 1;
+    const stream = [
+      "BT",
+      `/F1 ${fontSize} Tf`,
+      `${margin} ${pageHeight - margin} Td`,
+      ...page.map((line, lineIndex) => {
+        const lineOffset = lineIndex === 0 ? 0 : -lineHeight;
+        return `0 ${lineOffset} Td (${escapePdfText(line)}) Tj`;
+      }),
+      "ET",
+    ].join("\n");
+
+    objects.push(
+      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageWidth} ${pageHeight}] /Resources << /Font << /F1 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> >> >> /Contents ${contentObjectNumber} 0 R >>`,
+      `<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`,
+    );
+  });
+
+  const offsets = [0];
+  let pdf = "%PDF-1.4\n";
+
+  objects.forEach((object, index) => {
+    offsets.push(pdf.length);
+    pdf += `${index + 1} 0 obj\n${object}\nendobj\n`;
+  });
+
+  const xrefOffset = pdf.length;
+  pdf += `xref\n0 ${objects.length + 1}\n`;
+  pdf += "0000000000 65535 f \n";
+  offsets.slice(1).forEach((offset) => {
+    pdf += `${String(offset).padStart(10, "0")} 00000 n \n`;
+  });
+  pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\n`;
+  pdf += `startxref\n${xrefOffset}\n%%EOF`;
+
+  return pdf;
+}
+
+function wrapLine(line, maxChars) {
+  if (line.length <= maxChars) {
+    return [line];
+  }
+
+  const parts = [];
+  let current = line;
+
+  while (current.length > maxChars) {
+    const splitAt = current.lastIndexOf(" ", maxChars);
+    const index = splitAt > 20 ? splitAt : maxChars;
+    parts.push(current.slice(0, index));
+    current = current.slice(index).trimStart();
+  }
+
+  if (current) {
+    parts.push(current);
+  }
+
+  return parts;
+}
+
+function escapePdfText(value) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[()\\]/g, "\\$&");
 }
