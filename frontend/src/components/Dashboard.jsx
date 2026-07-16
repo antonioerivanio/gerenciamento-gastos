@@ -330,32 +330,69 @@ export default function Dashboard({ session, onSignOut }) {
           </div>
         </div>
 
-        <div className="session-box">
-          <span>{session.user.email}</span>
-          <button
-            className="icon-action"
-            disabled={signingOut}
-            onClick={handleSignOut}
-            title="Sair"
-            type="button"
-          >
-            <LogOut size={18} aria-hidden="true" />
-          </button>
+        <div className="header-actions">
+          <div className="session-box header-control">
+            <span>{showValues ? "Valores visíveis" : "Valores ocultos"}</span>
+            <button
+              aria-label={showValues ? "Ocultar valores" : "Mostrar valores"}
+              className="icon-action neutral"
+              onClick={() => setShowValues((current) => !current)}
+              title={showValues ? "Ocultar valores" : "Mostrar valores"}
+              type="button"
+            >
+              {showValues ? (
+                <EyeOff size={17} aria-hidden="true" />
+              ) : (
+                <Eye size={17} aria-hidden="true" />
+              )}
+            </button>
+          </div>
+
+          <div className="session-box">
+            <span>{session.user.email}</span>
+            <button
+              className="icon-action"
+              disabled={signingOut}
+              onClick={handleSignOut}
+              title="Sair"
+              type="button"
+            >
+              <LogOut size={18} aria-hidden="true" />
+            </button>
+          </div>
         </div>
       </header>
 
       <section className="summary-grid" aria-label="Resumo financeiro">
         <article className="summary-card income">
           <span>Entradas</span>
-          <strong>{currency.format(totals.entradas)}</strong>
+          <strong>
+            {showValues ? (
+              currency.format(totals.entradas)
+            ) : (
+              <span className="value-hidden">••••</span>
+            )}
+          </strong>
         </article>
         <article className="summary-card expense">
           <span>Saidas</span>
-          <strong>{currency.format(totals.saidas)}</strong>
+          <strong>
+            {showValues ? (
+              currency.format(totals.saidas)
+            ) : (
+              <span className="value-hidden">••••</span>
+            )}
+          </strong>
         </article>
         <article className="summary-card balance">
           <span>Saldo</span>
-          <strong>{currency.format(totals.entradas - totals.saidas)}</strong>
+          <strong>
+            {showValues ? (
+              currency.format(totals.entradas - totals.saidas)
+            ) : (
+              <span className="value-hidden">••••</span>
+            )}
+          </strong>
         </article>
       </section>
 
@@ -486,22 +523,7 @@ export default function Dashboard({ session, onSignOut }) {
               <p className="eyebrow">Historico</p>
               <h2>Movimentacoes</h2>
             </div>
-            <div className="movement-toolbar">
-              <span className="movement-count">{movimentacoes.length}</span>
-              <button
-                aria-label={showValues ? "Ocultar valores" : "Mostrar valores"}
-                className="icon-action neutral"
-                onClick={() => setShowValues((current) => !current)}
-                title={showValues ? "Ocultar valores" : "Mostrar valores"}
-                type="button"
-              >
-                {showValues ? (
-                  <EyeOff size={17} aria-hidden="true" />
-                ) : (
-                  <Eye size={17} aria-hidden="true" />
-                )}
-              </button>
-            </div>
+            <span className="movement-count">{movimentacoes.length}</span>
           </div>
 
           {feedback && (
@@ -639,11 +661,18 @@ export default function Dashboard({ session, onSignOut }) {
         </div>
 
         <div className="report-summary">
-          <span>Entradas: {currency.format(reportTotals.entradas)}</span>
-          <span>Saidas: {currency.format(reportTotals.saidas)}</span>
+          <span>
+            Entradas:{" "}
+            {showValues ? currency.format(reportTotals.entradas) : "••••"}
+          </span>
+          <span>
+            Saidas: {showValues ? currency.format(reportTotals.saidas) : "••••"}
+          </span>
           <strong>
             Saldo:{" "}
-            {currency.format(reportTotals.entradas - reportTotals.saidas)}
+            {showValues
+              ? currency.format(reportTotals.entradas - reportTotals.saidas)
+              : "••••"}
           </strong>
         </div>
 
