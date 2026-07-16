@@ -46,6 +46,8 @@ const currency = new Intl.NumberFormat("pt-BR", {
   currency: "BRL",
 });
 
+const visibilityStorageKey = "gestao-financeira.showValues";
+
 export default function Dashboard({ session, onSignOut }) {
   const [movimentacoes, setMovimentacoes] = useState([]);
   const [form, setForm] = useState(emptyForm);
@@ -55,7 +57,20 @@ export default function Dashboard({ session, onSignOut }) {
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState(null);
   const [signingOut, setSigningOut] = useState(false);
-  const [showValues, setShowValues] = useState(true);
+  const [showValues, setShowValues] = useState(() => {
+    if (typeof window === "undefined") {
+      return true;
+    }
+
+    const storedValue = window.localStorage.getItem(visibilityStorageKey);
+    return storedValue === null ? true : storedValue === "true";
+  });
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(visibilityStorageKey, String(showValues));
+    }
+  }, [showValues]);
 
   const loadMovimentacoes = useCallback(async () => {
     setLoading(true);
