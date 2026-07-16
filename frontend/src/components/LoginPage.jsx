@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { KeyRound, Lock, Mail, UserRound, WalletCards } from 'lucide-react';
+import { Eye, EyeOff, KeyRound, Lock, Mail, UserRound, WalletCards } from 'lucide-react';
 
 const SIGN_UP_COOLDOWN_SECONDS = 60;
 
@@ -44,6 +44,8 @@ export default function LoginPage({
   });
   const [feedback, setFeedback] = useState({ type: null, message: null });
   const [submitting, setSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [cooldownUntil, setCooldownUntil] = useState(0);
   const [now, setNow] = useState(Date.now());
 
@@ -77,6 +79,8 @@ export default function LoginPage({
 
   function changeMode(nextMode) {
     setMode(nextMode);
+    setShowPassword(false);
+    setShowConfirmPassword(false);
     setFeedback({ type: null, message: null });
   }
 
@@ -256,9 +260,23 @@ export default function LoginPage({
                   name="password"
                   onChange={updateField}
                   required
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   value={form.password}
                 />
+                <button
+                  aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                  className="password-toggle"
+                  disabled={configMissing || submitting || isBlockedByCooldown}
+                  onClick={() => setShowPassword((current) => !current)}
+                  title={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                  type="button"
+                >
+                  {showPassword ? (
+                    <EyeOff size={18} aria-hidden="true" />
+                  ) : (
+                    <Eye size={18} aria-hidden="true" />
+                  )}
+                </button>
               </div>
             </label>
           )}
@@ -275,9 +293,23 @@ export default function LoginPage({
                   name="confirmPassword"
                   onChange={updateField}
                   required
-                  type="password"
+                  type={showConfirmPassword ? 'text' : 'password'}
                   value={form.confirmPassword}
                 />
+                <button
+                  aria-label={showConfirmPassword ? 'Ocultar confirmacao de senha' : 'Mostrar confirmacao de senha'}
+                  className="password-toggle"
+                  disabled={configMissing || submitting}
+                  onClick={() => setShowConfirmPassword((current) => !current)}
+                  title={showConfirmPassword ? 'Ocultar confirmacao de senha' : 'Mostrar confirmacao de senha'}
+                  type="button"
+                >
+                  {showConfirmPassword ? (
+                    <EyeOff size={18} aria-hidden="true" />
+                  ) : (
+                    <Eye size={18} aria-hidden="true" />
+                  )}
+                </button>
               </div>
             </label>
           )}
