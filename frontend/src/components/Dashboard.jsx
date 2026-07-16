@@ -4,6 +4,8 @@ import {
   ArrowUpCircle,
   Download,
   Edit3,
+  Eye,
+  EyeOff,
   FileText,
   LogOut,
   Plus,
@@ -53,6 +55,7 @@ export default function Dashboard({ session, onSignOut }) {
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState(null);
   const [signingOut, setSigningOut] = useState(false);
+  const [showValues, setShowValues] = useState(true);
 
   const loadMovimentacoes = useCallback(async () => {
     setLoading(true);
@@ -91,9 +94,7 @@ export default function Dashboard({ session, onSignOut }) {
     () =>
       Array.from(
         new Set(
-          movimentacoes
-            .map((item) => item.categoria?.trim())
-            .filter(Boolean),
+          movimentacoes.map((item) => item.categoria?.trim()).filter(Boolean),
         ),
       ).sort((first, second) => first.localeCompare(second, "pt-BR")),
     [movimentacoes],
@@ -284,7 +285,11 @@ export default function Dashboard({ session, onSignOut }) {
       ),
     ];
 
-    downloadFile(buildReportFilename("pdf"), buildPdf(lines), "application/pdf");
+    downloadFile(
+      buildReportFilename("pdf"),
+      buildPdf(lines),
+      "application/pdf",
+    );
   }
 
   const currencyFormatter = new Intl.NumberFormat("pt-BR", {
@@ -481,7 +486,22 @@ export default function Dashboard({ session, onSignOut }) {
               <p className="eyebrow">Historico</p>
               <h2>Movimentacoes</h2>
             </div>
-            <span className="movement-count">{movimentacoes.length}</span>
+            <div className="movement-toolbar">
+              <span className="movement-count">{movimentacoes.length}</span>
+              <button
+                aria-label={showValues ? "Ocultar valores" : "Mostrar valores"}
+                className="icon-action neutral"
+                onClick={() => setShowValues((current) => !current)}
+                title={showValues ? "Ocultar valores" : "Mostrar valores"}
+                type="button"
+              >
+                {showValues ? (
+                  <EyeOff size={17} aria-hidden="true" />
+                ) : (
+                  <Eye size={17} aria-hidden="true" />
+                )}
+              </button>
+            </div>
           </div>
 
           {feedback && (
@@ -527,8 +547,14 @@ export default function Dashboard({ session, onSignOut }) {
                       item.tipo === "ENTRADA" ? "value-income" : "value-expense"
                     }
                   >
-                    {item.tipo === "ENTRADA" ? "+" : "-"}{" "}
-                    {currency.format(Number(item.valor))}
+                    {showValues ? (
+                      <>
+                        {item.tipo === "ENTRADA" ? "+" : "-"}{" "}
+                        {currency.format(Number(item.valor))}
+                      </>
+                    ) : (
+                      <span className="value-hidden">••••</span>
+                    )}
                   </strong>
                   <div className="movement-actions">
                     <button
@@ -616,7 +642,8 @@ export default function Dashboard({ session, onSignOut }) {
           <span>Entradas: {currency.format(reportTotals.entradas)}</span>
           <span>Saidas: {currency.format(reportTotals.saidas)}</span>
           <strong>
-            Saldo: {currency.format(reportTotals.entradas - reportTotals.saidas)}
+            Saldo:{" "}
+            {currency.format(reportTotals.entradas - reportTotals.saidas)}
           </strong>
         </div>
 
@@ -706,15 +733,17 @@ function buildPdf(lines) {
   const pages = [[]];
   let y = margin;
 
-  lines.flatMap((line) => wrapLine(line, maxChars)).forEach((line) => {
-    if (y > pageHeight - margin) {
-      pages.push([]);
-      y = margin;
-    }
+  lines
+    .flatMap((line) => wrapLine(line, maxChars))
+    .forEach((line) => {
+      if (y > pageHeight - margin) {
+        pages.push([]);
+        y = margin;
+      }
 
-    pages.at(-1).push(line);
-    y += lineHeight;
-  });
+      pages.at(-1).push(line);
+      y += lineHeight;
+    });
 
   const objects = [
     "<< /Type /Catalog /Pages 2 0 R >>",
